@@ -2,7 +2,7 @@
   "lockfileVersion": 1,
   "workspaces": {
     "": {
-      "name": "serverless",
+      "name": "next-app",
       "dependencies": {
         "next": "16.0.1",
         "react": "19.2.0",
