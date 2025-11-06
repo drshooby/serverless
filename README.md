@@ -17,10 +17,11 @@ This project is a full-fledged AI Single Page Application (SPA) built with serve
 
 ## Environment Vars
 
-- The following variables are **required** (region is optional w/ `us-east-1` fallback). Please view `next-app/app/auth/auth.config.ts` for formatting:
+- The following variables are **required** for local dev (region is optional w/ `us-east-1` fallback). Please view `next-app/app/auth/auth.config.ts` for formatting:
 ```bash
 NEXT_PUBLIC_COGNITO_CLIENT_ID=
 NEXT_PUBLIC_COGNITO_USER_POOL_ID=
 NEXT_PUBLIC_COGNITO_DOMAIN=
 NEXT_PUBLIC_COGNITO_REDIRECT_URI=
 ```
+
