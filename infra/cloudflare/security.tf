@@ -5,6 +5,6 @@ resource "cloudflare_zone_settings_override" "ettukube" {
     ssl              = "flexible"
     always_use_https = "on"
 
-    security_level = "under_attack" # "medium"
+    security_level = "medium"
   }
 }
