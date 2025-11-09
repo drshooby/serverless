@@ -21,7 +21,7 @@ export const AuthConfigProvider = ({ children }: { children: ReactNode }) => {
 const InnerAuthProvider = ({ children }: { children: ReactNode }) => {
   const { config, loading } = useCognitoConfig();
 
-  if (loading || !config) return <Loading />;
+  if (loading || !config) return <Loading message="Configuring Auth..." />;
 
   return <AuthProvider {...config}>{children}</AuthProvider>;
 };

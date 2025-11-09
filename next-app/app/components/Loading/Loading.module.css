@@ -12,9 +12,6 @@
   color: #0000;
   animation: l17 2s infinite;
 }
-.loader:before {
-  content:"Loading...";
-}
 
 @keyframes l17 {
    0% {text-shadow: 

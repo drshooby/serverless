@@ -41,10 +41,9 @@ export default function Home() {
     window.location.href = logoutUrl.toString();
   };
 
-  if (loading || auth.isLoading) return <Loading />;
+  if (loading || auth.isLoading) return <Loading message="Logging you in..." />;
   if (auth.error) return <div>Oops... {auth.error.message}</div>;
-  if (!auth.isAuthenticated)
-    return <div>You have been signed out. Redirecting to sign in...</div>;
+  if (!auth.isAuthenticated) return <Loading message="Signing you out..." />;
 
   return (
     <div>
