@@ -55,7 +55,7 @@ export async function getAuthVars(): Promise<CognitoSettings> {
   } else {
     // Production: fetch from Lambda
     const GATEWAY_URL = "PLACEHOLDER_URL"
-    if (GATEWAY_URL === "PLACEHOLDER_URL") { 
+    if (!GATEWAY_URL.startsWith("https")) { 
       throw new Error("GATEWAY_URL was not replaced during build - check your sed script");
     }
     const res = await fetch(`${GATEWAY_URL}/api/cognito`);
