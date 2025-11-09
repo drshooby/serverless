@@ -54,10 +54,10 @@ export async function getAuthVars(): Promise<CognitoSettings> {
     console.log("Using local NEXT_PUBLIC env for Cognito config:", data);
   } else {
     // Production: fetch from Lambda
-    const GATEWAY_URL = "https://jx7siawh2a.execute-api.us-east-1.amazonaws.com/prod" // PLACEHOLDER_URL for sed
-    // if (GATEWAY_URL === "PLACEHOLDER_URL") {
-    //   throw new Error("GATEWAY_URL was not replaced during build - check your sed script");
-    // }
+    const GATEWAY_URL = "PLACEHOLDER_URL"
+    if (GATEWAY_URL === "PLACEHOLDER_URL") { 
+      throw new Error("GATEWAY_URL was not replaced during build - check your sed script");
+    }
     const res = await fetch(`${GATEWAY_URL}/api/cognito`);
     if (!res.ok) throw new Error("Failed to fetch Cognito config from Lambda");
     data = await res.json();
