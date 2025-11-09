@@ -1,18 +1,20 @@
 /* HTML: <div class="loader"></div> */
 .loader {
-  --w: 10ch;
   font-weight: bold;
   font-family: monospace;
   font-size: 30px;
   line-height: 1.2em;
-  letter-spacing: var(--w);
-  width: var(--w);
-  overflow: hidden;
   white-space: nowrap;
   color: #0000;
   animation: l17 2s infinite;
   text-align: center;
+
+  /* allow text to fit naturally */
+  letter-spacing: 0.5ch; /* subtle spacing without forcing width */
+  width: auto;
+  overflow: visible;
 }
+
 
 @keyframes l17 {
    0% {text-shadow: 
