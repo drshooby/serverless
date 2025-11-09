@@ -1,6 +1,6 @@
 /* HTML: <div class="loader"></div> */
 .loader {
-  --w:10ch;
+  --w: 10ch;
   font-weight: bold;
   font-family: monospace;
   font-size: 30px;
@@ -11,6 +11,7 @@
   white-space: nowrap;
   color: #0000;
   animation: l17 2s infinite;
+  text-align: center;
 }
 
 @keyframes l17 {
