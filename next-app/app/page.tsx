@@ -23,6 +23,15 @@ export default function Home() {
     } else {
       redirectToLogin();
     }
+
+    // Clean up OAuth params from URL after successful auth
+    if (
+      auth.isAuthenticated &&
+      (window.location.search.includes("code=") ||
+        window.location.search.includes("state="))
+    ) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   }, [redirectToLogin]);
 
   // Logout handler using dynamic config
