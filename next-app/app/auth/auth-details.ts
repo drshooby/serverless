@@ -51,7 +51,6 @@ export async function getAuthVars(): Promise<CognitoSettings> {
       NEXT_PUBLIC_COGNITO_REDIRECT_URI,
       NEXT_PUBLIC_COGNITO_DOMAIN,
     };
-    console.log("Using local NEXT_PUBLIC env for Cognito config:", data);
   } else {
     // Production: fetch from Lambda
     const GATEWAY_URL = "PLACEHOLDER_URL"
@@ -62,11 +61,8 @@ export async function getAuthVars(): Promise<CognitoSettings> {
     if (!res.ok) throw new Error("Failed to fetch Cognito config from Lambda");
     data = await res.json();
     data.GATEWAY_URL = GATEWAY_URL
-    console.log("Fetched Cognito config from Lambda:", data);
   }
 
   cachedConfig = normalizeConfig(data);
-  console.log("Normalized Cognito config:", cachedConfig);
-
   return cachedConfig;
 }

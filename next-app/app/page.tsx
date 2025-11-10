@@ -45,12 +45,9 @@ export default function Home() {
   if (auth.error) return <div>Oops... {auth.error.message}</div>;
   if (!auth.isAuthenticated) return <Loading message="Signing you out" />;
 
-  console.log("Full auth.user:", auth.user);
-  console.log("Profile object:", auth.user?.profile);
-
   return (
     <div>
-      <h1>Hi, {auth.user?.profile.email}</h1>
+      <h1>Hi, {auth.user?.profile["cognito:username"] as string}</h1>
       <button onClick={signOut}>Sign out</button>
 
       <hr />
