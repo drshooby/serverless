@@ -16,18 +16,12 @@
   font-weight: bold;
 }
 
-/* loader under the text, slightly smaller */
 .loader {
   width: 30px;
   aspect-ratio: 1;
   border-radius: 50%;
-  border: 5px solid;
-  border-color: var(--charcoal);
+  border: 8px solid;
+  border-color: #000 #0000;
   animation: l1 1s infinite;
 }
-
-@keyframes l1 {
-  to {
-    transform: rotate(0.5turn);
-  }
-}
+@keyframes l1 {to{transform: rotate(.5turn)}}
