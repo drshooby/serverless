@@ -15,6 +15,10 @@
 .greeting {
   font-size: 1.1rem;
   color: var(--charcoal);
+  max-width: 200px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .logo {
@@ -99,7 +103,7 @@
 }
 
 .uploadSubtext {
-  color: #666;
+  color: var(--charcoal);
   font-size: 0.9rem;
 }
 

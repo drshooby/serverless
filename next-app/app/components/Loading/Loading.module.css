@@ -22,8 +22,8 @@
   aspect-ratio: 1;
   border-radius: 50%;
   border: 5px solid;
-  border-color: var(--charcoal) var(--yellow);
-  animation: l1 1s infinite linear;
+  border-color: var(--charcoal) var(--charcoal);
+  animation: l1 1s infinite;
 }
 
 @keyframes l1 {
@@ -31,4 +31,3 @@
     transform: rotate(0.5turn);
   }
 }
-
