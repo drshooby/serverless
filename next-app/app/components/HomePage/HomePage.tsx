@@ -5,6 +5,7 @@ import type { HomePageProps, Montage } from "./HomePage.types.ts";
 import { VideoPlayer } from "@/app/components/VideoPlayer";
 import { SignOutButton } from "@/app/components/SignOutButton";
 import { VideoLoading } from "@/app/components/VideoLoading";
+import { uploadToS3, processMontage } from "@/app/functions";
 
 export function HomePage({ username = "Agent" }: HomePageProps) {
   const [showUpload, setShowUpload] = useState<boolean>(true);
@@ -40,18 +41,42 @@ export function HomePage({ username = "Agent" }: HomePageProps) {
     }
   };
 
-  const handleFile = (file: File) => {
+  const handleFile = async (file: File) => {
     console.log("File uploaded:", file.name);
     setProcessing(true);
 
-    const videoUrl = URL.createObjectURL(file);
+    try {
+      // Upload to S3
+      const uploadResult = await uploadToS3({
+        file,
+        userId: username,
+      });
 
-    // Simulate backend processing
-    setTimeout(() => {
+      if (!uploadResult.success) {
+        throw new Error(uploadResult.error);
+      }
+
+      // Start montage processing
+      const processResult = await processMontage({
+        s3Key: uploadResult.s3Key,
+        userId: username,
+      });
+
+      if (!processResult.success) {
+        throw new Error(processResult.error);
+      }
+
+      // TODO: Poll for completion or set up websocket
+      // For now, create local preview
+      const videoUrl = URL.createObjectURL(file);
       setCurrentVideo(videoUrl);
       setProcessing(false);
       setShowUpload(false);
-    }, 3000);
+    } catch (error) {
+      console.error("Error processing video:", error);
+      setProcessing(false);
+      // TODO: Show error message to user
+    }
   };
 
   const loadMontage = (montage: Montage) => {
