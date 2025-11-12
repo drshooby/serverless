@@ -13,6 +13,15 @@
   position: relative;
 }
 
+@media (max-width: 768px) {
+  .greeting {
+    display: none;
+  }
+  .header {
+    flex-direction: column;
+  }
+}
+
 .greeting {
   font-size: 1.1rem;
   color: var(--charcoal);
