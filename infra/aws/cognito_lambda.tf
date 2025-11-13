@@ -31,7 +31,7 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
 
 # Secrets Manager access policy
 resource "aws_iam_role_policy" "secrets_manager_policy" {
-  name = "cognito-lambda-secrets-policy"
+  name = "lambda-secrets-policy"
   role = aws_iam_role.cognito_lambda_role.id
 
   policy = jsonencode({
@@ -43,7 +43,7 @@ resource "aws_iam_role_policy" "secrets_manager_policy" {
           "secretsmanager:GetSecretValue",
           "secretsmanager:DescribeSecret"
         ]
-        Resource = aws_secretsmanager_secret.cognito_config.arn
+        Resource = aws_secretsmanager_secret.app_config.arn
       }
     ]
   })
