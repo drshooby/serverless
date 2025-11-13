@@ -33,7 +33,7 @@ jobs:
       - name: Add API Gateway Identifier
         run: |
           cd app/auth
-          sed -i "s|PLACEHOLDER_URL|${{ secrets.API_GATEWAY_URL }}|g" auth-details.ts
+          sed -i "s|GATEWAY_PLACEHOLDER_URL|${{ secrets.API_GATEWAY_URL }}|g" auth-details.ts
           grep -q "${{ secrets.API_GATEWAY_URL }}" auth-details.ts && echo "URL replaced successfully!" || exit 1
       
       - name: Export Static Site
