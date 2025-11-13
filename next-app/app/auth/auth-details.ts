@@ -1,20 +1,21 @@
-export interface CognitoSettings {
+export interface SiteSettings {
   authority: string;
   client_id: string;
   redirect_uri: string;
   domain: string;
   response_type: string;
   scopes: string;
-  gateway_url: string
+  gateway_url: string;
+  upload_bucket: string;
 }
 
 const SCOPES = "email openid profile";
 const RESPONSE_TYPE = "code";
 
-let cachedConfig: CognitoSettings | null = null;
+let cachedConfig: SiteSettings | null = null;
 
-// Normalize either local env or Lambda fetch result into CognitoSettings
-function normalizeConfig(data: Record<string, string>): CognitoSettings {
+// Normalize either local env or Lambda fetch result into SiteSettings
+function normalizeConfig(data: Record<string, string>): SiteSettings {
   return {
     authority: data.NEXT_PUBLIC_COGNITO_ENDPOINT || data.COGNITO_ENDPOINT!,
     client_id: data.NEXT_PUBLIC_COGNITO_CLIENT_ID || data.COGNITO_CLIENT_ID!,
@@ -23,11 +24,12 @@ function normalizeConfig(data: Record<string, string>): CognitoSettings {
     domain: data.NEXT_PUBLIC_COGNITO_DOMAIN || data.COGNITO_DOMAIN!,
     response_type: RESPONSE_TYPE,
     scopes: SCOPES,
-    gateway_url: data.GATEWAY_URL || ""
+    gateway_url: data.GATEWAY_URL || "",
+    upload_bucket: data.UPLOAD_BUCKET || "",
   };
 }
 
-export async function getAuthVars(): Promise<CognitoSettings> {
+export async function getAuthVars(): Promise<SiteSettings> {
   if (cachedConfig) return cachedConfig;
 
   let data: Record<string, string>;
@@ -53,7 +55,7 @@ export async function getAuthVars(): Promise<CognitoSettings> {
     };
   } else {
     // Production: fetch from Lambda
-    const GATEWAY_URL = "PLACEHOLDER_URL"
+    const GATEWAY_URL = "GATEWAY_PLACEHOLDER_URL"
     if (!GATEWAY_URL.startsWith("https")) { 
       throw new Error("GATEWAY_URL was not replaced during build - check your sed script");
     }

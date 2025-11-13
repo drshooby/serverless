@@ -5,15 +5,20 @@ import type { HomePageProps, Montage } from "./HomePage.types.ts";
 import { VideoPlayer } from "@/app/components/VideoPlayer";
 import { SignOutButton } from "@/app/components/SignOutButton";
 import { VideoLoading } from "@/app/components/VideoLoading";
-import { uploadToS3, processMontage } from "@/app/functions";
+import { uploadToS3 } from "@/app/functions";
 
-export function HomePage({ username, email, onSignOut }: HomePageProps) {
+export function HomePage({
+  username,
+  email,
+  bucketURL,
+  onSignOut,
+}: HomePageProps) {
   const [showUpload, setShowUpload] = useState<boolean>(true);
   const [currentVideo, setCurrentVideo] = useState<string | null>(null);
   const [processing, setProcessing] = useState<boolean>(false);
   const [dragActive, setDragActive] = useState<boolean>(false);
 
-  const previousMontages: Montage[] = [];
+  // const previousMontages: Montage[] = [];
 
   const handleDrag = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
@@ -49,24 +54,14 @@ export function HomePage({ username, email, onSignOut }: HomePageProps) {
       // Upload to S3
       const uploadResult = await uploadToS3({
         file,
-        userId: username,
+        userEmail: email,
+        bucket: bucketURL,
       });
 
       if (!uploadResult.success) {
         throw new Error(uploadResult.error);
       }
 
-      // Start montage processing
-      const processResult = await processMontage({
-        s3Key: uploadResult.s3Key,
-        userId: username,
-      });
-
-      if (!processResult.success) {
-        throw new Error(processResult.error);
-      }
-
-      // TODO: Poll for completion or set up websocket
       // For now, create local preview
       const videoUrl = URL.createObjectURL(file);
       setCurrentVideo(videoUrl);
@@ -149,7 +144,7 @@ export function HomePage({ username, email, onSignOut }: HomePageProps) {
           )}
         </section>
 
-        <section className={styles.montagesSection}>
+        {/* <section className={styles.montagesSection}>
           <h2 className={styles.sectionTitle}>Previous Montages</h2>
           <div
             className={`${styles.montagesGrid} ${
@@ -172,7 +167,7 @@ export function HomePage({ username, email, onSignOut }: HomePageProps) {
               </div>
             ))}
           </div>
-        </section>
+        </section> */}
       </main>
     </div>
   );

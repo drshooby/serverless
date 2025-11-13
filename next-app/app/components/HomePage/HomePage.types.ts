@@ -13,5 +13,6 @@ export interface VideoPlayerProps {
 export interface HomePageProps {
   username: string;
   email: string;
+  bucketURL: string
   onSignOut: () => void;
 }

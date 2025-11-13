@@ -2,13 +2,13 @@
 
 import { useAuth } from "react-oidc-context";
 import { useEffect, useCallback } from "react";
-import { useCognitoConfig } from "@/app/auth/CognitoConfigContext";
+import { useSiteConfig } from "@/app/auth/SiteConfigContext";
 import { Loading } from "@/app/components/Loading";
 import { HomePage } from "@/app/components/HomePage";
 
 export default function Home() {
   const auth = useAuth();
-  const { config, loading } = useCognitoConfig();
+  const { config, loading } = useSiteConfig();
 
   // Redirect to login if not authenticated
   const redirectToLogin = useCallback(() => {
@@ -61,5 +61,17 @@ export default function Home() {
     "Agent";
   const email = auth.user?.profile.email as string;
 
-  return <HomePage username={username} email={email} onSignOut={signOut} />;
+  const bucket = config?.upload_bucket || "";
+  if (bucket === "") {
+    throw new Error("No upload bucket found!");
+  }
+
+  return (
+    <HomePage
+      username={username}
+      email={email}
+      bucketURL={config?.upload_bucket as string}
+      onSignOut={signOut}
+    />
+  );
 }

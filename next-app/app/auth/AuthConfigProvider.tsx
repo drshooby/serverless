@@ -2,24 +2,21 @@
 
 import { AuthProvider } from "react-oidc-context";
 import { ReactNode } from "react";
-import {
-  CognitoConfigProvider,
-  useCognitoConfig,
-} from "./CognitoConfigContext";
+import { SiteConfigProvider, useSiteConfig } from "./SiteConfigContext";
 import { Loading } from "@/app/components/Loading";
 
 // Top-level wrapper
 export const AuthConfigProvider = ({ children }: { children: ReactNode }) => {
   return (
-    <CognitoConfigProvider>
+    <SiteConfigProvider>
       <InnerAuthProvider>{children}</InnerAuthProvider>
-    </CognitoConfigProvider>
+    </SiteConfigProvider>
   );
 };
 
 // Waits for config to load before rendering AuthProvider
 const InnerAuthProvider = ({ children }: { children: ReactNode }) => {
-  const { config, loading } = useCognitoConfig();
+  const { config, loading } = useSiteConfig();
 
   if (loading || !config) return <Loading />;
 

@@ -1,6 +1,9 @@
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+
 export interface UploadToS3Params {
   file: File;
-  userId: string;
+  userEmail: string;
+  bucket: string
 }
 
 export interface UploadToS3Response {
@@ -10,44 +13,19 @@ export interface UploadToS3Response {
   error?: string;
 }
 
-export async function uploadToS3(
-  params: UploadToS3Params
-): Promise<UploadToS3Response> {
-  try {
-    const { file, userId } = params;
-    
-    // Generate unique filename
-    const timestamp = Date.now();
-    const fileExtension = file.name.split('.').pop();
-    const s3Key = `uploads/${userId}/${timestamp}.${fileExtension}`;
-    
-    // TODO: Get presigned URL from your backend
-    // const presignedUrl = await getPresignedUrl(s3Key);
-    
-    // TODO: Upload file to S3 using presigned URL
-    // await fetch(presignedUrl, {
-    //   method: 'PUT',
-    //   body: file,
-    //   headers: {
-    //     'Content-Type': file.type,
-    //   },
-    // });
-    
-    // TODO: Return actual S3 URL after upload
-    const s3Url = `https://your-bucket.s3.amazonaws.com/${s3Key}`;
-    
-    return {
-      success: true,
-      s3Key,
-      s3Url,
-    };
-  } catch (error) {
-    console.error('S3 upload error:', error);
-    return {
+export async function uploadToS3({ file, userEmail, bucket }: UploadToS3Params): Promise<UploadToS3Response> {
+  const s3Client = new S3Client({
+    region: "us-east-1",
+  });
+
+  const s3Url = `https://your-bucket.s3.amazonaws.com/${s3Key}`;
+
+  const s3Key = `${userEmail}/${Date.now()}-${file.name}`;
+  
+  return {
       success: false,
       s3Key: '',
       s3Url: '',
-      error: error instanceof Error ? error.message : 'Upload failed',
+      error: "fail",
     };
-  }
 }
