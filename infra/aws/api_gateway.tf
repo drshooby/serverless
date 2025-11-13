@@ -1,55 +1,99 @@
 # API Gateway REST API
-resource "aws_api_gateway_rest_api" "cognito_api" {
-  name        = "cognito-config-api"
+resource "aws_api_gateway_rest_api" "app_api" {
+  name        = "app-config-api"
   description = "API for Cognito configuration"
 }
 
 # /api resource
 resource "aws_api_gateway_resource" "api" {
-  rest_api_id = aws_api_gateway_rest_api.cognito_api.id
-  parent_id   = aws_api_gateway_rest_api.cognito_api.root_resource_id
+  rest_api_id = aws_api_gateway_rest_api.app_api.id
+  parent_id   = aws_api_gateway_rest_api.app_api.root_resource_id
   path_part   = "api"
 }
 
-# /api/cognito resource
-resource "aws_api_gateway_resource" "cognito" {
-  rest_api_id = aws_api_gateway_rest_api.cognito_api.id
-  parent_id   = aws_api_gateway_resource.api.id
-  path_part   = "cognito"
+# Define all endpoints
+locals {
+  api_endpoints = {
+    cognito = {
+      path_part   = "cognito"
+      methods     = ["GET"]
+      lambda_arn  = aws_lambda_function.cognito_func.invoke_arn
+      lambda_name = aws_lambda_function.cognito_func.function_name
+    }
+    upload = {
+      path_part   = "get-upload-url"
+      methods     = ["POST"]
+      lambda_arn  = aws_lambda_function.s3_signed_func.invoke_arn
+      lambda_name = aws_lambda_function.s3_signed_func.function_name
+    }
+  }
 }
 
-# GET method
-resource "aws_api_gateway_method" "cognito_get" {
-  rest_api_id   = aws_api_gateway_rest_api.cognito_api.id
-  resource_id   = aws_api_gateway_resource.cognito.id
-  http_method   = "GET"
+# Create resources for each endpoint
+resource "aws_api_gateway_resource" "endpoints" {
+  for_each = local.api_endpoints
+
+  rest_api_id = aws_api_gateway_rest_api.app_api.id
+  parent_id   = aws_api_gateway_resource.api.id
+  path_part   = each.value.path_part
+}
+
+# Create methods for each endpoint
+resource "aws_api_gateway_method" "endpoint_methods" {
+  for_each = merge([
+    for endpoint_key, endpoint in local.api_endpoints : {
+      for method in endpoint.methods :
+      "${endpoint_key}-${method}" => {
+        endpoint_key = endpoint_key
+        method       = method
+      }
+    }
+  ]...)
+
+  rest_api_id   = aws_api_gateway_rest_api.app_api.id
+  resource_id   = aws_api_gateway_resource.endpoints[each.value.endpoint_key].id
+  http_method   = each.value.method
   authorization = "NONE"
 }
 
-# Lambda integration
-resource "aws_api_gateway_integration" "cognito_lambda" {
-  rest_api_id = aws_api_gateway_rest_api.cognito_api.id
-  resource_id = aws_api_gateway_resource.cognito.id
-  http_method = aws_api_gateway_method.cognito_get.http_method
+# Lambda integrations
+resource "aws_api_gateway_integration" "endpoint_integrations" {
+  for_each = merge([
+    for endpoint_key, endpoint in local.api_endpoints : {
+      for method in endpoint.methods :
+      "${endpoint_key}-${method}" => {
+        endpoint_key = endpoint_key
+        method       = method
+        lambda_arn   = endpoint.lambda_arn
+      }
+    }
+  ]...)
 
+  rest_api_id             = aws_api_gateway_rest_api.app_api.id
+  resource_id             = aws_api_gateway_resource.endpoints[each.value.endpoint_key].id
+  http_method             = aws_api_gateway_method.endpoint_methods[each.key].http_method
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.cognito_func.invoke_arn
+  uri                     = each.value.lambda_arn
 }
 
-# OPTIONS method for CORS preflight
-resource "aws_api_gateway_method" "cognito_options" {
-  rest_api_id   = aws_api_gateway_rest_api.cognito_api.id
-  resource_id   = aws_api_gateway_resource.cognito.id
+# OPTIONS methods for CORS
+resource "aws_api_gateway_method" "options_methods" {
+  for_each = local.api_endpoints
+
+  rest_api_id   = aws_api_gateway_rest_api.app_api.id
+  resource_id   = aws_api_gateway_resource.endpoints[each.key].id
   http_method   = "OPTIONS"
   authorization = "NONE"
 }
 
-# Mock integration for OPTIONS
-resource "aws_api_gateway_integration" "cognito_options" {
-  rest_api_id = aws_api_gateway_rest_api.cognito_api.id
-  resource_id = aws_api_gateway_resource.cognito.id
-  http_method = aws_api_gateway_method.cognito_options.http_method
+# Mock integrations for OPTIONS
+resource "aws_api_gateway_integration" "options_integrations" {
+  for_each = local.api_endpoints
+
+  rest_api_id = aws_api_gateway_rest_api.app_api.id
+  resource_id = aws_api_gateway_resource.endpoints[each.key].id
+  http_method = aws_api_gateway_method.options_methods[each.key].http_method
   type        = "MOCK"
 
   request_templates = {
@@ -57,11 +101,13 @@ resource "aws_api_gateway_integration" "cognito_options" {
   }
 }
 
-# OPTIONS method response
-resource "aws_api_gateway_method_response" "cognito_options" {
-  rest_api_id = aws_api_gateway_rest_api.cognito_api.id
-  resource_id = aws_api_gateway_resource.cognito.id
-  http_method = aws_api_gateway_method.cognito_options.http_method
+# OPTIONS method responses
+resource "aws_api_gateway_method_response" "options_responses" {
+  for_each = local.api_endpoints
+
+  rest_api_id = aws_api_gateway_rest_api.app_api.id
+  resource_id = aws_api_gateway_resource.endpoints[each.key].id
+  http_method = aws_api_gateway_method.options_methods[each.key].http_method
   status_code = "200"
 
   response_parameters = {
@@ -75,42 +121,45 @@ resource "aws_api_gateway_method_response" "cognito_options" {
   }
 }
 
-# OPTIONS integration response
-resource "aws_api_gateway_integration_response" "cognito_options" {
-  rest_api_id = aws_api_gateway_rest_api.cognito_api.id
-  resource_id = aws_api_gateway_resource.cognito.id
-  http_method = aws_api_gateway_method.cognito_options.http_method
-  status_code = aws_api_gateway_method_response.cognito_options.status_code
+# OPTIONS integration responses
+resource "aws_api_gateway_integration_response" "options_integration_responses" {
+  for_each = local.api_endpoints
+
+  rest_api_id = aws_api_gateway_rest_api.app_api.id
+  resource_id = aws_api_gateway_resource.endpoints[each.key].id
+  http_method = aws_api_gateway_method.options_methods[each.key].http_method
+  status_code = aws_api_gateway_method_response.options_responses[each.key].status_code
 
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "method.response.header.Access-Control-Allow-Methods" = "'GET,OPTIONS'"
-    "method.response.header.Access-Control-Allow-Origin"  = "'*'" # update this
+    "method.response.header.Access-Control-Allow-Methods" = "'${join(",", concat(each.value.methods, ["OPTIONS"]))}'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
   }
 }
 
-# Lambda permission for API Gateway
-resource "aws_lambda_permission" "api_gateway" {
-  statement_id  = "AllowAPIGatewayInvoke"
+# Lambda permissions
+resource "aws_lambda_permission" "api_gateway_permissions" {
+  for_each = local.api_endpoints
+
+  statement_id  = "AllowAPIGatewayInvoke-${each.key}"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.cognito_func.function_name
+  function_name = each.value.lambda_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.cognito_api.execution_arn}/*/*"
+  source_arn    = "${aws_api_gateway_rest_api.app_api.execution_arn}/*/*"
 }
 
 # Deployment
-resource "aws_api_gateway_deployment" "cognito_api" {
+resource "aws_api_gateway_deployment" "api" {
   depends_on = [
-    aws_api_gateway_integration.cognito_lambda,
-    aws_api_gateway_integration.cognito_options
+    aws_api_gateway_integration.endpoint_integrations,
+    aws_api_gateway_integration.options_integrations
   ]
 
-  rest_api_id = aws_api_gateway_rest_api.cognito_api.id
+  rest_api_id = aws_api_gateway_rest_api.app_api.id
 }
 
-resource "aws_api_gateway_stage" "cognito_stage" {
+resource "aws_api_gateway_stage" "stage" {
   stage_name    = "prod"
-  deployment_id = aws_api_gateway_deployment.cognito_api.id
-  rest_api_id   = aws_api_gateway_rest_api.cognito_api.id
+  deployment_id = aws_api_gateway_deployment.api.id
+  rest_api_id   = aws_api_gateway_rest_api.app_api.id
 }
-

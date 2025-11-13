@@ -16,11 +16,13 @@ output "cognito_pool_endpoint" {
   value = "https://${aws_cognito_user_pool.cognito_pool.endpoint}"
 }
 
-output "cognito_config_api_url" {
-  value       = aws_api_gateway_resource.cognito.path
-  description = "URL to fetch Cognito configuration"
-}
-
-output "api_gateway_identifier" {
-  value = aws_api_gateway_stage.cognito_stage.invoke_url
+output "api_endpoint_urls" {
+  value = {
+    base_url = "${aws_api_gateway_stage.stage.invoke_url}${aws_api_gateway_resource.api.path}"
+    endpoints = {
+      for key, endpoint in local.api_endpoints :
+      key => "${aws_api_gateway_stage.stage.invoke_url}${aws_api_gateway_resource.api.path}/${endpoint.path_part}"
+    }
+  }
+  description = "API Gateway endpoint URLs"
 }
