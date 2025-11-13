@@ -13,7 +13,7 @@ export interface UploadToS3Response {
 
 export async function uploadToS3({ file, userEmail, gatewayURI }: UploadToS3Params): Promise<UploadToS3Response> {
   try {
-    const response = await fetch(`${gatewayURI}/api/get-upload-url`, {
+    const response = await fetch(`${gatewayURI}/get-upload-url`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
