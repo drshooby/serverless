@@ -1,6 +1,8 @@
-# AWS Rekognition Custom Labels - Kill Detection Model
+# AWS Rekognition Custom Labels - Valorant Kill Detection Model
 
 This project trains an AWS Rekognition Custom Labels model to detect "kill" events in images using object detection.
+
+Data handling scripts are written by Claude AI.
 
 ## Dataset Credit
 
