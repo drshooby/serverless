@@ -1,6 +1,6 @@
 # Radiant
 
-This project is for my Cloud Computing final with the following requirements:
+This project is for my Cloud Computing final at the University of San Francisco.
 
 ## Project Overview
 
