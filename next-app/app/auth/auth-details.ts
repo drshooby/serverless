@@ -7,6 +7,7 @@ export interface SiteSettings {
   scopes: string;
   gateway_url: string;
   upload_bucket: string;
+  ffmpeg_success: string;
 }
 
 const SCOPES = "email openid profile";
@@ -26,6 +27,7 @@ function normalizeConfig(data: Record<string, string>): SiteSettings {
     scopes: SCOPES,
     gateway_url: data.GATEWAY_URL || "",
     upload_bucket: data.UPLOAD_BUCKET || "",
+    ffmpeg_success: data.FFMPEG_STATUS || ""
   };
 }
 
@@ -63,6 +65,7 @@ export async function getAuthVars(): Promise<SiteSettings> {
     if (!res.ok) throw new Error("Failed to fetch Cognito config from Lambda");
     data = await res.json();
     data.GATEWAY_URL = GATEWAY_URL
+    console.log(data.FFMPEG_STATUS)
   }
 
   cachedConfig = normalizeConfig(data);
