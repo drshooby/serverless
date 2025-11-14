@@ -78,7 +78,7 @@ Once done, Google sign-in will be enabled in the Cognito UI.
 - Rekognition trained only on kills (submitter POV)
 - Intermediate files stored temporarily in S3
 
-### Architecture Flow
+## Architecture Flow
 
 ```
 S3 Upload → EventBridge → Orchestrator Lambda
@@ -109,9 +109,9 @@ S3 Upload → EventBridge → Orchestrator Lambda
                     Save to S3 + RDS + Cleanup
 ```
 
-### Lambda Functions
+## Lambda Functions
 
-#### Lambda 1: Start Rekognition
+### Lambda 1: Start Rekognition
 
 **Trigger:** EventBridge (S3 PutObject)
 **Purpose:** Initiate Rekognition video analysis
@@ -120,7 +120,7 @@ S3 Upload → EventBridge → Orchestrator Lambda
 - Action: Start Rekognition Custom Labels job for kill detection
 - Output: JobId for tracking
 
-#### Lambda 2: Process Results
+### Lambda 2: Process Results
 
 **Purpose:** Extract and merge kill timestamps
 
@@ -131,7 +131,7 @@ S3 Upload → EventBridge → Orchestrator Lambda
   - Apply interval merging algorithm
 - Output: Array of clip intervals `[{start: 5.2, end: 9.5}, {start: 12.0, end: 15.8}]`
 
-#### Lambda 3: Extract & Enhance Clip (Parallel Execution)
+### Lambda 3: Extract & Enhance Clip (Parallel Execution)
 
 **Purpose:** Process individual clips with AI commentary - **FFmpeg Layer Required**
 
@@ -144,7 +144,7 @@ S3 Upload → EventBridge → Orchestrator Lambda
   - Save enhanced clip to S3
 - Output: S3 path of enhanced clip
 
-#### Lambda 4: Concatenate
+### Lambda 4: Concatenate
 
 **Purpose:** Combine all clips into final montage - **FFmpeg Layer Required**
 
@@ -152,7 +152,7 @@ S3 Upload → EventBridge → Orchestrator Lambda
 - Action: FFmpeg concatenate all clips into single video
 - Output: Final montage S3 URL
 
-#### Lambda 5: Cleanup
+### Lambda 5: Cleanup
 
 **Purpose:** Remove intermediate files and persist results to RDS
 
@@ -170,7 +170,7 @@ S3 Upload → EventBridge → Orchestrator Lambda
 - Output: Success status
 - Keep: Original video + final montage + thumbnail in S3
 
-### S3 Directory Structure
+## S3 Directory Structure
 
 ```
 /uploads/[email]/[timestamp]-original.mp4 # Original upload
