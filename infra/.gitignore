@@ -28,4 +28,4 @@ crash.*.log
 .DS_Store
 
 # Lambda
-*_func.zip
+*.zip
