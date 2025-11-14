@@ -3,7 +3,7 @@ import json
 from PIL import Image
 
 DATASET_ROOT = "data_rekognition_format"
-BUCKET_NAME = "custom-labels-console-us-east-1-764f97bb2d"  # CHANGE THIS
+BUCKET_NAME = "custom-labels-console-us-east-1-764f97bb2d"  # MY BUCKET, CHANGE THIS
 S3_PREFIX = "dataset"  # Change if you upload to a different path
 
 # Define your class names here - map class IDs to their names
