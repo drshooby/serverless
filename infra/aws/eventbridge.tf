@@ -1,47 +1,82 @@
-# Enable EventBridge notifications on S3 bucket (still needed)
+# Enable EventBridge notifications on S3 bucket
 resource "aws_s3_bucket_notification" "bucket_notification" {
   bucket      = aws_s3_bucket.upload_bucket.id
   eventbridge = true
 }
 
-# EventBridge module
-module "eventbridge" {
-  source  = "terraform-aws-modules/eventbridge/aws"
-  version = "~> 3.0"
+# EventBridge Rule
+resource "aws_cloudwatch_event_rule" "s3_upload" {
+  name        = "s3-upload-trigger-step-functions"
+  description = "Trigger Step Functions when video uploaded to S3"
 
-  create_bus = false # Use default event bus
-
-  rules = {
-    s3-upload = {
-      description = "Trigger on S3 PutObject"
-      event_pattern = jsonencode({
-        source      = ["aws.s3"]
-        detail-type = ["Object Created"]
-        detail = {
-          reason = ["PutObject"]
-          bucket = {
-            name = [aws_s3_bucket.upload_bucket.id]
-          }
-        }
-      })
-    }
-  }
-
-  targets = {
-    s3-upload = [
-      {
-        name = "process-upload-lambda"
-        arn  = aws_lambda_function.process_upload_func.arn
+  event_pattern = jsonencode({
+    source      = ["aws.s3"]
+    detail-type = ["Object Created"]
+    detail = {
+      reason = ["PutObject"]
+      bucket = {
+        name = [aws_s3_bucket.upload_bucket.id]
       }
-    ]
-  }
+    }
+  })
 }
 
-# Permission for EventBridge to invoke Lambda
-resource "aws_lambda_permission" "allow_eventbridge" {
-  statement_id  = "AllowExecutionFromEventBridge"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.process_upload_func.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = module.eventbridge.eventbridge_rule_arns["s3-upload"]
+# EventBridge Target (Step Functions)
+resource "aws_cloudwatch_event_target" "step_functions" {
+  rule     = aws_cloudwatch_event_rule.s3_upload.name
+  arn      = aws_sfn_state_machine.process_upload.arn
+  role_arn = aws_iam_role.eventbridge_step_functions_role.arn
+
+  input_transformer {
+    input_paths = {
+      bucket = "$.detail.bucket.name"
+      key    = "$.detail.object.key"
+    }
+
+    input_template = <<EOF
+{
+  "bucket": <bucket>,
+  "videoKey": <key>,
+  "modelArn": "${var.rekognition_model_arn}"
+}
+EOF
+  }
+
+
+}
+
+# IAM Role for EventBridge to trigger Step Functions
+resource "aws_iam_role" "eventbridge_step_functions_role" {
+  name = "eventbridge-step-functions-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "events.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "eventbridge_step_functions_policy" {
+  name = "eventbridge-step-functions-policy"
+  role = aws_iam_role.eventbridge_step_functions_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "states:StartExecution"
+        ]
+        Resource = aws_sfn_state_machine.process_upload.arn
+      }
+    ]
+  })
 }
