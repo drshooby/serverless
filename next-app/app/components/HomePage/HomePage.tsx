@@ -62,7 +62,7 @@ export function HomePage({
   const handleFile = async (file: File) => {
     console.log("Attempting upload:", file.name);
 
-    const MAX_SIZE_MB = 25;
+    const MAX_SIZE_MB = 100;
     const fileSizeMB = file.size / (1024 * 1024);
 
     if (fileSizeMB > MAX_SIZE_MB) {
