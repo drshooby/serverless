@@ -4,10 +4,25 @@ import time
 import os
 from botocore.exceptions import ClientError
 import uuid
+import traceback
 
 s3_client = boto3.client('s3', region_name='us-east-1')
 
 def lambda_handler(event, context):
+    print(f"Received event: {json.dumps(event)}")
+    
+    # Handle OPTIONS for CORS preflight
+    if event.get('httpMethod') == 'OPTIONS':
+        return {
+            'statusCode': 200,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS'
+            },
+            'body': ''
+        }
+    
     try:
         body = json.loads(event['body'])
         user_email = body['userEmail']
@@ -15,7 +30,7 @@ def lambda_handler(event, context):
         content_type = body.get('contentType', 'application/octet-stream')
         
         bucket_name = os.environ['UPLOAD_BUCKET']
-        job_id = str(uuid.uuid4())  # Generate job_id FIRST
+        job_id = str(uuid.uuid4())
         s3_key = f"{user_email}/{job_id}/{int(time.time() * 1000)}-{file_name}"
         
         presigned_url = s3_client.generate_presigned_url(
@@ -48,6 +63,8 @@ def lambda_handler(event, context):
         }
         
     except ClientError as e:
+        print(f"ClientError: {str(e)}")
+        print(traceback.format_exc())
         return {
             'statusCode': 500,
             'headers': {
@@ -58,6 +75,8 @@ def lambda_handler(event, context):
             })
         }
     except Exception as e:
+        print(f"Exception: {str(e)}")
+        print(traceback.format_exc())
         return {
             'statusCode': 400,
             'headers': {
