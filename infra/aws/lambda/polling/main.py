@@ -2,7 +2,7 @@ import boto3
 import json
 import os
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 
 client = boto3.client('stepfunctions')
 
@@ -87,7 +87,7 @@ def lambda_handler(event, context):
                 'status': 'PENDING_REDRIVE',
                 'isComplete': False,
                 'found': False,
-                'startDate': datetime.now(datetime.timezone.utc),
+                'startDate': datetime.now(timezone.utc).isoformat(),
                 'message': 'Execution not started yet'
             })
         }
