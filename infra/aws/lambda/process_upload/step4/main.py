@@ -30,9 +30,21 @@ def lambda_handler(event, context):
     output_clips = []
     clip_files = []  # Keep track of processed clips for concatenation
 
-    prompt = "Generate a short sentence of hype commentary for a Valorant game highlight -- keep it generic. " \
-    "Make the commentary long enough to span over a 4 second clip." \
-    "ONLY output the commentary sentence(s), nothing else."
+    prompt = """You are an excited esports commentator. Generate ONE short, energetic commentary line for a Valorant highlight clip.
+        Rules:
+        - Output ONLY the commentary itself, no preamble or explanation
+        - Keep it under 15 words
+        - Make it exciting and hype
+        - Be generic (don't mention specific player names or abilities)
+
+        Examples:
+        "WHAT A SHOT! ABSOLUTELY INCREDIBLE!"
+        "THEY NEVER SAW IT COMING!"
+        "PURE DOMINATION RIGHT THERE!"
+        "THAT'S HOW YOU CLUTCH IT!"
+
+        Now generate one commentary line:
+    """
 
     for i, clip in enumerate(clips):
         print(f"\nProcessing clip {i + 1}/{len(clips)}: {clip['start']}s - {clip['end']}s")
@@ -170,7 +182,8 @@ def lambda_handler(event, context):
                     '-filter_complex', f'{filter_complex};{audio_filter}',
                     '-map', '[outv]',
                     '-map', '[outa]',
-                    '-c:v', 'mpeg4',
+                    '-c:v', 'mpeg2video',
+                    '-qscale:v', '2',
                     '-c:a', 'aac',
                     '-y', concatenated_file
                 ], check=True, capture_output=True)
@@ -194,21 +207,25 @@ def lambda_handler(event, context):
                         current_offset += durations[i+1] - transition_duration
                 
                 final_video_label = f'v{len(clip_files)-2}{len(clip_files)-1}'
-                filter_complex = ';'.join(video_filters)
                 
-                # For now, just use first clip's audio (mixing multiple audio tracks is complex)
+                # Build audio concat filter - concatenate all audio tracks
+                audio_inputs_str = ''.join(f'[{i}:a]' for i in range(len(clip_files)))
+                audio_filter = f'{audio_inputs_str}concat=n={len(clip_files)}:v=0:a=1[outa]'
+                
+                # Combine video and audio filters
+                filter_complex = ';'.join(video_filters) + ';' + audio_filter
+                
                 subprocess.run([
                     'ffmpeg',
                     *inputs,
                     '-filter_complex', filter_complex,
                     '-map', f'[{final_video_label}]',
-                    '-map', '0:a',  # Use first clip's audio
-                    '-c:v', 'mpeg4',
+                    '-map', '[outa]',  # Use concatenated audio instead of just first clip
+                    '-c:v', 'mpeg2video',
+                    '-qscale:v', '2',
                     '-c:a', 'aac',
                     '-y', concatenated_file
                 ], check=True, capture_output=True)
-            
-            print(f"  Clips concatenated with xfade to {concatenated_file}")
             
         except subprocess.CalledProcessError as e:
             print(f"  xfade error: {e.stderr.decode()}")
@@ -270,7 +287,8 @@ def lambda_handler(event, context):
 
     # Step 7: Upload final video to S3
     if final_output:
-        output_key = f"{email}/output/{video_filename}_montage.mp4"
+        base_name, _ = os.path.splitext(video_filename)
+        output_key = f"{email}/output/{base_name}_montage.mp4"
         
         try:
             s3.upload_file(final_output, bucket, output_key)
