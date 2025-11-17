@@ -26,6 +26,12 @@ locals {
       lambda_arn  = aws_lambda_function.s3_signed_func.invoke_arn
       lambda_name = aws_lambda_function.s3_signed_func.function_name
     }
+    status = {
+      path_part   = "poll"
+      methods     = ["POST"]
+      lambda_arn  = aws_lambda_function.polling_func.invoke_arn
+      lambda_name = aws_lambda_function.polling_func.function_name
+    }
   }
 }
 
@@ -97,12 +103,12 @@ resource "aws_api_gateway_integration" "options_integrations" {
   type        = "MOCK"
 
   request_templates = {
-    "application/json" = jsonencode({
-      statusCode = 200
-    })
+    "application/json" = <<EOF
+{
+  "statusCode": 200
+}
+EOF
   }
-
-  passthrough_behavior = "WHEN_NO_MATCH"
 }
 
 # OPTIONS method responses
