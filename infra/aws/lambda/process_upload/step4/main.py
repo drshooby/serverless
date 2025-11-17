@@ -41,11 +41,9 @@ def lambda_handler(event, context):
 
     output_clips = []
 
-    prompt = "Generate ONE short sentence of hype commentary for a gaming highlight. Maximum 15 words. Just the commentary sentence, nothing else."
+    prompt = "Generate ONE short sentence of hype commentary for a Valorant game highlight. Maximum 12 words. Just the commentary sentence, nothing else."
 
     for i, clip in enumerate(clips):
-        print(f"\nProcessing clip {i + 1}/{len(clips)}: {clip['start']}s - {clip['end']}s")
-
         # Step 1: Generate commentary with Bedrock
         print("  Generating commentary with Bedrock...")
 
@@ -98,7 +96,7 @@ def lambda_handler(event, context):
                 'ffmpeg', '-i', video_file,
                 '-ss', str(clip['start']),
                 '-to', str(clip['end']),
-                '-c:v', 'libx264', '-c:a', 'aac',
+                '-c', 'copy',
                 '-y', clip_file
             ], check=True, capture_output=True)
             print(f"  Clip extracted to {clip_file}")
@@ -142,7 +140,6 @@ def lambda_handler(event, context):
             continue
 
         # Step 5: Upload to S3 in output directory
-        print("  Uploading to S3...")
         video_filename = video_key.split('/')[-1]
         output_key = f"{email}/output/{video_filename}_clip_{i}.mp4"
 
