@@ -3,6 +3,7 @@ import boto3
 import time
 import os
 from botocore.exceptions import ClientError
+import uuid
 
 s3_client = boto3.client('s3', region_name='us-east-1')
 
@@ -14,7 +15,8 @@ def lambda_handler(event, context):
         content_type = body.get('contentType', 'application/octet-stream')
         
         bucket_name = os.environ['UPLOAD_BUCKET']
-        s3_key = f"{user_email}/{int(time.time() * 1000)}-{file_name}"
+        job_id = str(uuid.uuid4())  # Generate job_id FIRST
+        s3_key = f"{user_email}/{job_id}/{int(time.time() * 1000)}-{file_name}"
         
         presigned_url = s3_client.generate_presigned_url(
             'put_object',
@@ -23,7 +25,8 @@ def lambda_handler(event, context):
                 'Key': s3_key,
                 'ContentType': content_type,
                 'Metadata': {
-                    'user-email': user_email
+                    'user-email': user_email,
+                    'job-id': job_id
                 }
             },
             ExpiresIn=300
@@ -39,7 +42,8 @@ def lambda_handler(event, context):
             'body': json.dumps({
                 'presignedUrl': presigned_url,
                 's3Key': s3_key,
-                's3Url': f"https://{bucket_name}.s3.amazonaws.com/{s3_key}"
+                's3Url': f"https://{bucket_name}.s3.amazonaws.com/{s3_key}",
+                'jobID': job_id
             })
         }
         
