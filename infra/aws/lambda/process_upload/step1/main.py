@@ -25,11 +25,7 @@ def lambda_handler(event, context):
             'statusCode': 400,
             'error': f'Could not extract email from videoKey: {str(e)}'
         }
-
-    print(f"Bucket: {bucket}")
-    print(f"Video: {video_key}")
-    print(f"Email: {email}")
-
+    
     return {
         'bucket': bucket,
         'videoKey': video_key,
