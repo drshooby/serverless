@@ -11,7 +11,7 @@ locals {
       name    = "process-upload-step2-rekognition"
       path    = "${path.module}/lambda/process_upload/step2/main.py"
       timeout = 600
-      memory  = 2048
+      memory  = 1024
       layers  = [aws_lambda_layer_version.ffmpeg_layer.arn]
     }
     step3 = {
