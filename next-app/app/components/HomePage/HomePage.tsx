@@ -76,6 +76,9 @@ export function HomePage({
 
     console.log("Beginning processing:");
 
+    setProcessing(true);
+    setShowUpload(false);
+
     try {
       // Upload to S3
       const uploadResult = await uploadToS3({
@@ -88,15 +91,19 @@ export function HomePage({
         throw new Error(uploadResult.error);
       }
 
+      console.log(uploadResult.s3Key);
+      console.log(uploadResult.s3Url);
+
       // For now, create local preview
-      const videoUrl = URL.createObjectURL(file);
-      setCurrentVideo(videoUrl);
-      setProcessing(false);
-      setShowUpload(false);
+      // const videoUrl = URL.createObjectURL(file);
+      // setCurrentVideo(videoUrl);
+      // setProcessing(false);
     } catch (error) {
       console.error("Error processing video:", error);
-      setProcessing(false);
       // TODO: Show error message to user
+    } finally {
+      setProcessing(false);
+      setShowUpload(true);
     }
   };
 
