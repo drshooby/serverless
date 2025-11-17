@@ -11,17 +11,11 @@ s3_client = boto3.client('s3', region_name='us-east-1')
 def lambda_handler(event, context):
     print(f"Received event: {json.dumps(event)}")
     
-    # Handle OPTIONS for CORS preflight
-    if event.get('httpMethod') == 'OPTIONS':
-        return {
-            'statusCode': 200,
-            'headers': {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type',
-                'Access-Control-Allow-Methods': 'POST, OPTIONS'
-            },
-            'body': ''
-        }
+    cors_headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS'
+    }
     
     try:
         body = json.loads(event['body'])
@@ -49,11 +43,7 @@ def lambda_handler(event, context):
         
         return {
             'statusCode': 200,
-            'headers': {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type',
-                'Access-Control-Allow-Methods': 'POST, OPTIONS'
-            },
+            'headers': cors_headers,
             'body': json.dumps({
                 'presignedUrl': presigned_url,
                 's3Key': s3_key,
@@ -67,9 +57,7 @@ def lambda_handler(event, context):
         print(traceback.format_exc())
         return {
             'statusCode': 500,
-            'headers': {
-                'Access-Control-Allow-Origin': '*',
-            },
+            'headers': cors_headers,
             'body': json.dumps({
                 'error': str(e)
             })
@@ -79,9 +67,7 @@ def lambda_handler(event, context):
         print(traceback.format_exc())
         return {
             'statusCode': 400,
-            'headers': {
-                'Access-Control-Allow-Origin': '*',
-            },
+            'headers': cors_headers,
             'body': json.dumps({
                 'error': str(e)
             })
