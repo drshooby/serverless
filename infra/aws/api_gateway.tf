@@ -34,7 +34,7 @@ locals {
     }
     database = {
       path_part   = "videos"
-      methods     = ["GET", "POST", "DELETE"]
+      methods     = ["POST"]
       lambda_arn  = aws_lambda_function.db_func.invoke_arn
       lambda_name = aws_lambda_function.db_func.function_name
     }
