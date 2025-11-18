@@ -32,6 +32,12 @@ locals {
       lambda_arn  = aws_lambda_function.polling_func.invoke_arn
       lambda_name = aws_lambda_function.polling_func.function_name
     }
+    database = {
+      path_part   = "videos"
+      methods     = ["GET", "POST", "DELETE"]
+      lambda_arn  = aws_lambda_function.db_func.invoke_arn
+      lambda_name = aws_lambda_function.db_func.function_name
+    }
   }
 }
 
