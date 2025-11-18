@@ -14,3 +14,21 @@ resource "aws_secretsmanager_secret_version" "app_config" {
     UPLOAD_BUCKET        = aws_s3_bucket.upload_bucket.id
   })
 }
+
+resource "aws_secretsmanager_secret" "db_secret" {
+  name        = "db-secret"
+  description = "Database details for lambda"
+}
+
+resource "aws_secretsmanager_secret_version" "db_secret" {
+  secret_id = aws_secretsmanager_secret.db_secret.id
+  secret_string = jsonencode({
+    username    = var.db_user_info.username
+    password    = var.db_user_info.password
+    engine      = "postgres"
+    host        = module.db.db_instance_address
+    port        = 5432
+    dbname      = var.db_user_info.db_name
+    BUCKET_NAME = aws_s3_bucket.upload_bucket.id
+  })
+}
