@@ -132,6 +132,7 @@ export function HomePage({
 
     try {
       const url = await client.getVideoURL(video.videoId);
+      console.log(url);
       setCurrentVideo(url);
       setShowUpload(false);
     } catch (error) {
