@@ -29,9 +29,10 @@ resource "aws_iam_role_policy" "step_functions_policy" {
         Action = [
           "lambda:InvokeFunction"
         ]
-        Resource = [
-          for lambda in aws_lambda_function.process_upload : lambda.arn
-        ]
+        Resource = concat(
+          values(aws_lambda_function.process_upload)[*].arn,
+          [aws_lambda_function.db_func.arn]
+        )
       },
       {
         Effect = "Allow"
@@ -110,8 +111,8 @@ resource "aws_sfn_state_machine" "process_upload" {
       }
       GenerateClips = {
         Type     = "Task"
+        Next     = "AddToDatabase"
         Resource = aws_lambda_function.process_upload["step4"].arn
-        End      = true
         Retry = [
           {
             ErrorEquals     = ["States.TaskFailed"]
@@ -120,6 +121,18 @@ resource "aws_sfn_state_machine" "process_upload" {
             BackoffRate     = 2.0
           }
         ]
+      }
+      AddToDatabase = {
+        Type     = "Task"
+        End      = true
+        Resource = aws_lambda_function.db_func.arn
+        Parameters = {
+          "operation"   = "createVideoRecord"
+          "userEmail.$" = "$.email"
+          "jobId.$"     = "$$.Execution.Name"
+          "inputKey.$"  = "$.videoKey"
+          "outputKey.$" = "$.montageKey"
+        }
       }
     }
   })

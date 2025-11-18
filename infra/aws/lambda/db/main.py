@@ -33,6 +33,17 @@ def get_connection():
         )
     return conn
 
+def build_api_rsp(output, status):
+    return {
+        "statusCode": status,
+        "headers": {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Content-Type",
+            "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS"
+        },
+        "body": json.dumps(output)
+    }
+
 
 def create_video_record(data):
     user_email = data["userEmail"]
@@ -49,6 +60,7 @@ def create_video_record(data):
         """, (video_id, user_email, job_id, input_key, output_key))
         conn.commit()
 
+    # step function use, no api call
     return {
         "status": "ok",
         "videoId": video_id,
@@ -79,7 +91,7 @@ def list_videos(data):
             "createdAt": created_at.isoformat()
         })
 
-    return results
+    return build_api_rsp(results, 200)
 
 
 def get_video_url(data):
@@ -97,17 +109,21 @@ def get_video_url(data):
 
     output_key = row[0]
 
+    expire_time = 3600
+
     presigned = s3.generate_presigned_url(
         "get_object",
         Params={"Bucket": BUCKET_NAME, "Key": output_key},
-        ExpiresIn=3600
+        ExpiresIn=expire_time
     )
 
-    return {
+    result = {
         "videoId": video_id,
-        "url": presigned
+        "url": presigned,
+        "expiresIn": expire_time
     }
 
+    return build_api_rsp(result, 200)
 
 def delete_video(data):
     video_id = data["videoId"]
@@ -136,12 +152,22 @@ def delete_video(data):
 
 
 def lambda_handler(event, context):
-    try:
-        body = event.get("body") if isinstance(event.get("body"), dict) else json.loads(event.get("body", "{}"))
-    except Exception:
+    print("DEBUG - Raw event:", json.dumps(event))
+    
+    # Step Functions passes data directly, API Gateway wraps it in 'body'
+    if "body" in event:
+        # API Gateway call
+        try:
+            body = json.loads(event["body"]) if isinstance(event["body"], str) else event["body"]
+        except Exception:
+            body = {}
+    else:
+        # Direct invocation (Step Functions)
         body = event
-
+    
+    print("DEBUG - Parsed body:", json.dumps(body))
     operation = body.get("operation")
+    print("DEBUG - Operation:", operation)
 
     conn = get_connection()
     with conn.cursor() as cur:
@@ -161,16 +187,13 @@ def lambda_handler(event, context):
     match operation:
         case "createVideoRecord":
             result = create_video_record(body)
+            # Step Function call - return plain dict
+            return result
         case "listVideos":
-            result = list_videos(body)
+            return list_videos(body)
         case "getVideoURL":
-            result = get_video_url(body)
+            return get_video_url(body)
         case "deleteVideo":
-            result = delete_video(body)
+            return delete_video(body)
         case _:
-            result = {"error": "Invalid operation"}
-
-    return {
-        "statusCode": 200,
-        "body": json.dumps(result)
-    }
+            return build_api_rsp({"error": "Invalid operation"}, 400)
