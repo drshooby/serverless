@@ -12,7 +12,7 @@ variable "aws_region" {
 
 variable "vpc_name" {
   type        = string
-  default     = "catastrophic-vpc"
+  default     = "radiant-vpc"
   description = "VPC name."
 }
 
@@ -61,4 +61,13 @@ variable "api_endpoints" {
 variable "rekognition_model_arn" {
   description = "ARN of the Rekognition Custom Labels model"
   type        = string
+}
+
+variable "db_user_info" {
+  type = object({
+    db_name  = string,
+    username = string,
+    password = string
+  })
+  sensitive = true
 }
