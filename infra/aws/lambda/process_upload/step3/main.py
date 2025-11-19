@@ -1,4 +1,4 @@
-BUFFER_SECONDS = 3.0
+BUFFER_SECONDS = 2.5
 
 def lambda_handler(event, context):
     video_key = event['videoKey']
