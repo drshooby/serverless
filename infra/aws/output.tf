@@ -29,3 +29,7 @@ output "api_endpoint_urls" {
 output "api_gateway_base_url" {
   value = "${aws_api_gateway_stage.stage.invoke_url}${aws_api_gateway_resource.api.path}"
 }
+
+output "upload_bucket" {
+  value = aws_s3_bucket.upload_bucket.id
+}
