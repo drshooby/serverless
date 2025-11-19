@@ -2,10 +2,34 @@ import boto3
 import json
 import subprocess
 import os
+import random
 
 s3 = boto3.client('s3')
 bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
 polly = boto3.client('polly')
+
+def pick_random_song(bucket, prefix="music/"):
+    try:
+        paginator = s3.get_paginator('list_objects_v2')
+        pages = list(paginator.paginate(Bucket=bucket, Prefix=prefix))
+
+        if not pages:
+            print("No music pages found -- check s3.")
+            return None
+
+        # Pick a random page
+        random_page = random.choice(pages)
+        contents = random_page.get('Contents', [])
+        if not contents:
+            print("No music page contents found -- check s3.")
+            return None
+
+        # Pick a random object from that page
+        random_object = random.choice(contents)
+        return random_object['Key']
+    except Exception as e:
+        print(f"Error finding music: {e}")
+        return None
 
 def lambda_handler(event, context):
     video_key = event['videoKey']
@@ -50,7 +74,7 @@ def lambda_handler(event, context):
         print(f"\nProcessing clip {i + 1}/{len(clips)}: {clip['start']}s - {clip['end']}s")
         
         # Step 1: Generate commentary with Bedrock
-        print("  Generating commentary with Bedrock...")
+        print("Generating commentary with Bedrock...")
 
         try:
             response = bedrock.invoke_model(
@@ -67,9 +91,9 @@ def lambda_handler(event, context):
             response_body = json.loads(response['body'].read())
             commentary = response_body['results'][0]['outputText'].strip()
             commentary = commentary.split('\n')[-1].strip('"\'')
-            print(f"  Commentary: {commentary}")
+            print(f"Commentary: {commentary}")
         except Exception as e:
-            print(f"  Bedrock error: {e}")
+            print(f"Bedrock error: {e}")
             commentary = "Nice play!"
 
         # Step 2: Generate audio with Polly
@@ -86,13 +110,13 @@ def lambda_handler(event, context):
 
             with open(audio_file, 'wb') as f:
                 f.write(polly_response['AudioStream'].read())
-            print(f"  Audio saved to {audio_file}")
+            print(f"Audio saved to {audio_file}")
         except Exception as e:
-            print(f"  Polly error: {e}")
+            print(f"Polly error: {e}")
             continue
 
         # Step 3: Extract video clip
-        print("  Extracting video clip...")
+        print("Extracting video clip...")
         clip_file = f'/tmp/clip_{i}.mp4'
 
         try:
@@ -109,7 +133,7 @@ def lambda_handler(event, context):
             continue
 
         # Step 4: Overlay JUST the commentary audio (no music yet)
-        print("  Overlaying commentary audio...")
+        print("Overlaying commentary audio...")
         final_file = f'/tmp/final_{i}.mp4'
 
         try:
@@ -232,8 +256,8 @@ def lambda_handler(event, context):
                 ], check=True, capture_output=True)
             
         except subprocess.CalledProcessError as e:
-            print(f"  xfade error: {e.stderr.decode()}")
-            print("  Falling back to simple concat...")
+            print(f"xfade error: {e.stderr.decode()}")
+            print("Falling back to simple concat...")
             
             # Fallback to simple concat without transitions
             concat_file = '/tmp/concat_list.txt'
@@ -255,43 +279,48 @@ def lambda_handler(event, context):
 
     # Step 6: Add background music to the final concatenated video
     music_file = None
+    final_output = None
+
     if concatenated_file:
         print("\nAdding background music to final video...")
         
         # Download background music
-        music_key = 'music/mortals.mp3'
-        music_file = '/tmp/background_music.mp3'
-        
-        try:
-            s3.download_file(bucket, music_key, music_file)
-            print(f"  Music downloaded to {music_file}")
+        music_key = pick_random_song(bucket)
+        if music_key:
+            print(f"Using music from: {music_key}")
+            music_file = '/tmp/background_music.mp3'
             
-            final_output = '/tmp/final_with_music.mp4'
-            
-            # Mix existing audio with background music
-            subprocess.run([
-                'ffmpeg',
-                '-i', concatenated_file,
-                '-i', music_file,
-                '-filter_complex', '[1:a]volume=0.2[bg];[0:a][bg]amix=inputs=2:duration=first[a]',
-                '-map', '0:v',
-                '-map', '[a]',
-                '-c:v', 'libx264',
-                '-preset', 'fast',
-                '-pix_fmt', 'yuv420p',
-                '-movflags', '+faststart',
-                '-c:a', 'aac',
-                '-shortest',
-                '-y', final_output
-            ], check=True, capture_output=True)
-            
-            print(f"  Final video with music created: {final_output}")
-            
-        except Exception as e:
-            print(f"  Music overlay error: {e}")
-            final_output = concatenated_file  # Use version without music
-    else:
-        final_output = None
+            try:
+                s3.download_file(bucket, music_key, music_file)
+                print(f"Music downloaded to {music_file}")
+                
+                final_output = '/tmp/final_with_music.mp4'
+                
+                # Mix existing audio with background music
+                subprocess.run([
+                    'ffmpeg',
+                    '-i', concatenated_file,
+                    '-i', music_file,
+                    '-filter_complex', '[1:a]volume=0.2[bg];[0:a][bg]amix=inputs=2:duration=first[a]',
+                    '-map', '0:v',
+                    '-map', '[a]',
+                    '-c:v', 'libx264',
+                    '-preset', 'fast',
+                    '-pix_fmt', 'yuv420p',
+                    '-movflags', '+faststart',
+                    '-c:a', 'aac',
+                    '-shortest',
+                    '-y', final_output
+                ], check=True, capture_output=True)
+                
+                print(f"Final video with music created: {final_output}")
+                
+            except Exception as e:
+                print(f"Music overlay error: {e}")
+                final_output = concatenated_file  # Use version without music
+        else:
+            print("No music found -- using original video.")
+            final_output = concatenated_file
 
     # Step 7: Upload final video to S3
     if final_output:
