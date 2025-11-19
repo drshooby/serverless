@@ -8,6 +8,6 @@ This guide explains how to make music available for your montages.
 
 ## Usage
 
-- The startup script `scripts/start.sh` automatically uploads this directory to S3, so all you need to do is add your MP3 files.
+- The startup script, `scripts/start.sh`, automatically uploads this directory to S3, so all you need to do is add your MP3 files.
 - The system currently selects a random song from the music directory when processing montages.
 - For implementation details, see `infra/aws/lambda/process_upload/step4/main.py`.
