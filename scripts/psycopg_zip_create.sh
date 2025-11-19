@@ -43,4 +43,13 @@ docker run --rm --platform linux/amd64 --entrypoint /bin/bash -v "$HOST_DESKTOP"
   echo 'psycopg2 Lambda layer created successfully'; \
 "
 
+if [ $? -eq 0 ]; then
+  echo "Removing Docker image..."
+  docker image rm $IMAGE || true
+  echo "Build completed successfully. Layer at ~/Desktop/$ZIP_NAME"
+else
+  echo "Build failed. Check the output above for errors."
+  exit 1
+fi
+
 echo "Build completed. The Lambda layer zip is located on your Desktop as $ZIP_NAME"
