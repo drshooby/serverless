@@ -1,74 +1,39 @@
 #!/bin/bash
 
-# Credit: ChatGPT
-# This function is meant to create a clean-slate between deployments
-
 set -euo pipefail
 
-# --- Variables ---
-ROOT_DIR="$(pwd)/.."          # Script is run from /scripts
+ROOT_DIR="$(pwd)/.."
 INFRA_DIR="${ROOT_DIR}/infra/aws"
 
-APP_SECRET_NAME="app-config"
-DB_SECRET_NAME="db-secret"
-
-# Optional Rekognition ARN (pass as first argument)
 REKOGNITION_ARN="${1:-}"
+SECRETS=("app-config" "db-secret")
 
-# --- Functions ---
-function log_info() {
-    echo -e "[INFO] $*"
+delete_secret() {
+    local name="$1"
+    echo "Deleting secret: $name..."
+    aws secretsmanager delete-secret \
+        --secret-id "$name" \
+        --force-delete-without-recovery \
+        || echo "Secret '$name' not found. Skipping."
 }
 
-function log_error() {
-    echo -e "[ERROR] $*" >&2
-}
+echo "Starting teardown..."
 
-function terraform_destroy() {
-    log_info "Starting Terraform destroy in ${INFRA_DIR}..."
-    (
-        cd "$INFRA_DIR" || exit 1
-        terraform destroy -auto-approve
-    )
-    log_info "Terraform destroy completed."
-}
+cd "$INFRA_DIR"
+terraform destroy -auto-approve
 
-function delete_secret() {
-    local secret_name="$1"
-    log_info "Deleting secret: ${secret_name}..."
-    if aws secretsmanager delete-secret \
-        --secret-id "${secret_name}" \
-        --force-delete-without-recovery; then
-        log_info "Secret ${secret_name} deleted successfully."
-    else
-        log_error "Failed to delete secret ${secret_name} (it may not exist). Continuing..."
-    fi
-}
+for secret in "${SECRETS[@]}"; do
+    delete_secret "$secret"
+done
 
-function stop_rekognition_model() {
-    local arn="$1"
-    log_info "Stopping Rekognition project version: ${arn}..."
-    if ! output=$(aws rekognition stop-project-version --project-version-arn "${arn}" --region "${AWS_REGION:-us-east-1}" 2>&1); then
-        log_error "Failed to stop Rekognition model. Output:"
-        log_error "${output}"
-    else
-        log_info "Rekognition model stop requested successfully."
-    fi
-}
-
-# --- Main Script ---
-log_info "=== Starting teardown ==="
-
-terraform_destroy
-
-delete_secret "${APP_SECRET_NAME}"
-delete_secret "${DB_SECRET_NAME}"
-
-if [[ -n "${REKOGNITION_ARN}" ]]; then
-    stop_rekognition_model "${REKOGNITION_ARN}"
+if [[ -n "$REKOGNITION_ARN" ]]; then
+    echo "Stopping Rekognition model..."
+    aws rekognition stop-project-version \
+        --project-version-arn "$REKOGNITION_ARN" \
+        --region "${AWS_REGION:-us-east-1}" \
+        || echo "Could not stop Rekognition model. Skipping."
 else
-    log_info "No Rekognition ARN provided. Skipping Rekognition stop."
+    echo "No Rekognition ARN provided."
 fi
 
-log_info "=== Teardown completed successfully ==="
-exit 0
+echo "Teardown complete."
