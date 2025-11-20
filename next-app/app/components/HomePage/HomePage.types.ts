@@ -2,6 +2,7 @@ export interface VideoRecord {
   videoId: string;
   jobId: string;
   outputKey: string;
+  thumbnailUrl: string;
   createdAt: string;
 }
 

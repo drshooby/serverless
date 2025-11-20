@@ -8,6 +8,7 @@ import { VideoLoading } from "@/app/components/VideoLoading";
 import { MontageClient } from "@/app/functions";
 import { Modal } from "@/app/components/Modal";
 import { ModalProps } from "@/app/components/Modal/Modal.types";
+import Image from "next/image";
 
 export function HomePage({
   username,
@@ -214,18 +215,44 @@ export function HomePage({
                 {index === 0 && (
                   <div className={styles.latestBadge}>Latest</div>
                 )}
-                <div className={styles.videoPlaceholder}>
-                  <svg
-                    className={styles.videoIcon}
-                    width="60"
-                    height="60"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <polygon points="5 3 19 12 5 21 5 3" />
-                  </svg>
+                <div className={styles.thumbnailContainer}>
+                  {video.thumbnailUrl ? (
+                    <Image
+                      src={video.thumbnailUrl}
+                      alt={
+                        video.outputKey.split("/").pop()?.replace(".mp4", "") ||
+                        "Montage"
+                      }
+                      fill
+                      className={styles.thumbnail}
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    />
+                  ) : (
+                    <div className={styles.videoPlaceholder}>
+                      <svg
+                        className={styles.videoIcon}
+                        width="60"
+                        height="60"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <polygon points="5 3 19 12 5 21 5 3" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className={styles.playOverlay}>
+                    <svg
+                      width="48"
+                      height="48"
+                      viewBox="0 0 24 24"
+                      fill="white"
+                      opacity="0.9"
+                    >
+                      <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                  </div>
                 </div>
                 <div className={styles.montageInfo}>
                   <div className={styles.montageTitle}>

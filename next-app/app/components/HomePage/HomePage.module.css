@@ -278,8 +278,19 @@
   box-shadow: 0 8px 16px rgba(0,0,0,0.1);
 }
 
-.montageCard:hover .videoPlaceholder {
-  border-color: var(--yellow);
+.playOverlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.montageCard:hover .playOverlay {
+  opacity: 1;
 }
 
 .latestBadge {
@@ -297,13 +308,10 @@
 
 .videoPlaceholder {
   width: 100%;
-  aspect-ratio: 16/9;
-  background: var(--white);
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-bottom: 3px solid transparent;
-  transition: border-color 0.3s ease;
 }
 
 .videoIcon {
@@ -315,6 +323,10 @@
 .montageCard:hover .videoIcon {
   opacity: 0.6;
   transform: scale(1.1);
+}
+
+.montageCard:hover .thumbnail {
+  transform: scale(1.05);
 }
 
 .montageInfo {
@@ -329,4 +341,17 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.thumbnailContainer {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: var(--white);
+  overflow: hidden;
+}
+
+.thumbnail {
+  object-fit: cover;
+  transition: transform 0.3s ease;
 }
