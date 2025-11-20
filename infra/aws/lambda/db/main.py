@@ -44,20 +44,39 @@ def build_api_rsp(output, status):
         "body": json.dumps(output)
     }
 
+def get_presigned(filetype, key):
+    match filetype:
+        case "video":
+            expire_time = 1200
+        case "image":
+            expire_time = 3600
+    
+    try:
+        presigned = s3.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": BUCKET_NAME, "Key": key},
+                ExpiresIn=expire_time
+            )
+        return presigned, expire_time
+    except Exception as e:
+        print(f"ERROR - Failed to generate presigned URL: {str(e)}")
+        return None, None
+
 
 def create_video_record(data):
     user_email = data["userEmail"]
     job_id = data["jobId"]
     output_key = data["outputKey"]
+    thumbnail_key = data["thumbnailKey"]
     input_key = data.get("inputKey")
     video_id = str(uuid.uuid4())
 
     conn = get_connection()
     with conn.cursor() as cur:
         cur.execute("""
-            INSERT INTO videos (id, user_email, job_id, input_key, output_key, created_at)
-            VALUES (%s, %s, %s, %s, %s, NOW())
-        """, (video_id, user_email, job_id, input_key, output_key))
+            INSERT INTO videos (id, user_email, job_id, input_key, output_key, thumbnail_key, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, NOW())
+        """, (video_id, user_email, job_id, input_key, output_key, thumbnail_key))
         conn.commit()
 
     # step function use, no api call
@@ -74,7 +93,7 @@ def list_videos(data):
     conn = get_connection()
     with conn.cursor() as cur:
         cur.execute("""
-            SELECT id, job_id, output_key, created_at
+            SELECT id, job_id, output_key, thumbnail_key, created_at
             FROM videos
             WHERE user_email = %s
             ORDER BY created_at DESC
@@ -83,11 +102,16 @@ def list_videos(data):
 
     results = []
     for r in rows:
-        video_id, job_id, output_key, created_at = r
+        video_id, job_id, output_key, thumbnail_key, created_at = r
+        
+        thumbnail_result = get_presigned("image", thumbnail_key)
+        thumbnail_url = thumbnail_result[0] if thumbnail_result else None
+
         results.append({
             "videoId": video_id,
             "jobId": job_id,
             "outputKey": output_key,
+            "thumbnailUrl": thumbnail_url if thumbnail_url else "",
             "createdAt": created_at.isoformat()
         })
 
@@ -113,44 +137,43 @@ def get_video_url(data):
 
     output_key = row[0]
 
-    expire_time = 3600
+    presigned, expire_time = get_presigned("video", output_key)
 
-    try:
-        presigned = s3.generate_presigned_url(
-            "get_object",
-            Params={"Bucket": BUCKET_NAME, "Key": output_key},
-            ExpiresIn=expire_time
-        )
-    except Exception as e:
-        print(f"ERROR - Failed to generate presigned URL: {str(e)}")
-        return build_api_rsp({"error": f"Failed to generate URL: {str(e)}"}, 500)
-
-    result = {
-        "videoId": video_id,
-        "url": presigned,
-        "expiresIn": expire_time
-    }
-
-    return build_api_rsp(result, 200)
+    if presigned:
+        result = {
+            "videoId": video_id,
+            "url": presigned,
+            "expiresIn": expire_time
+        }
+        status = 200
+    else:
+        result = {
+            "error": "Failed to generate presigned URL"
+        }
+        status = 500
+    
+    return build_api_rsp(result, status)
 
 def delete_video(data):
     video_id = data["videoId"]
     
     conn = get_connection()
     with conn.cursor() as cur:
-        cur.execute("SELECT output_key FROM videos WHERE id = %s", (video_id,))
+        cur.execute("SELECT output_key, thumbnail_key FROM videos WHERE id = %s", (video_id,))
         row = cur.fetchone()
 
     if not row:
         return {"error": "Video not found"}
 
-    output_key = row[0]
+    output_key, thumbnail_key = row
 
     with conn.cursor() as cur:
         cur.execute("DELETE FROM videos WHERE id = %s", (video_id,))
         conn.commit()
 
     s3.delete_object(Bucket=BUCKET_NAME, Key=output_key)
+    if thumbnail_key:
+        s3.delete_object(Bucket=BUCKET_NAME, Key=thumbnail_key)
 
     return {
         "status": "ok",
@@ -182,6 +205,7 @@ def lambda_handler(event, context):
                 job_id TEXT NOT NULL,
                 input_key TEXT,
                 output_key TEXT NOT NULL,
+                thumbnail_key TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT NOW()
             );
             CREATE INDEX IF NOT EXISTS idx_videos_user_email ON videos(user_email);
