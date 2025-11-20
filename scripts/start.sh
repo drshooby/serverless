@@ -19,7 +19,9 @@ echo "Starting Rekognition model..."
 aws rekognition start-project-version \
     --project-version-arn "$REKOGNITION_ARN" \
     --min-inference-units 1 \
-    --region "$REGION"
+    --region "$REGION" 2>&1 | grep -q "ResourceInUseException" && \
+    echo "Model already running, skipping." || \
+    echo "Started Rekognition model."
 
 echo "Rekognition starting..."
 
