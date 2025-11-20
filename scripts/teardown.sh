@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT_DIR="$(pwd)/.."
 INFRA_DIR="${ROOT_DIR}/infra/aws"
 
-REKOGNITION_ARN="${1:-}"
+REKOGNITION_ARN="${1:-}" # long one
 AWS_REGION="${2:-us-east-1}"
 SECRETS=("app-config" "db-secret")
 
@@ -30,11 +30,11 @@ else
     echo "No Rekognition ARN provided."
 fi
 
-cd "$INFRA_DIR"
-terraform destroy -auto-approve
-
 for secret in "${SECRETS[@]}"; do
     delete_secret "$secret"
 done
+
+cd "$INFRA_DIR"
+terraform destroy -auto-approve
 
 echo "Teardown complete."
