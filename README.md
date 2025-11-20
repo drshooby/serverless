@@ -119,15 +119,10 @@ Once done, Google sign-in will be enabled in the Cognito UI.
    - Output API Gateway URL and Cognito domains
 
 4. **Configure Frontend:**
-   Update `next-app/.env.local` with Cognito configuration from Terraform outputs.
+   Update `API_GATEWAY_URL` in GitHub Actions Secrets
 
 5. **Deploy Frontend:**
-   Build Next.js app and sync to S3 bucket:
-   ```bash
-   cd next-app/
-   npm run build
-   aws s3 sync out/ s3://your-static-site-bucket/
-   ```
+   Build Next.js app and sync to S3 bucket by running the GitHub Actions Workflow
 
 ### Teardown
 
@@ -138,10 +133,10 @@ cd scripts/
 
 ## Constraints
 
-- Videos limited to 25MB (~20 seconds) for Lambda compatibility
-- Rekognition trained only on kills (submitter POV)
-- All processing happens in Lambda `/tmp` (512MB-10GB depending on function)
-- Presigned upload URLs expire after 10 minutes
+- Videos limited to 300MB (~4 min)
+- Rekognition trained only on Valorant kills (submitter POV)
+- All processing happens in Lambda `/tmp` (not large, depending on function)
+- Presigned upload URLs expire after 5 minutes
 - Presigned video playback URLs expire after 20 minutes (1200s)
 - Presigned thumbnail URLs expire after 1 hour (3600s)
 
@@ -177,7 +172,7 @@ cd scripts/
   - `deleteVideo`: Delete video and S3 objects
     - Body: `{ "operation": "deleteVideo", "videoId": string }`
 
-**CORS:** All endpoints support CORS with `Access-Control-Allow-Origin: *`
+**CORS:** All endpoints currently support CORS with `Access-Control-Allow-Origin: *` (will be updated)
 
 ## Architecture Flow
 
@@ -249,7 +244,7 @@ S3 Upload → EventBridge → Start Step Function Lambda
 
 ### `scripts/s3.sh`
 
-**Purpose:** Sync local directory to S3 bucket
+**Purpose:** Sync Next.js static site output files to S3 bucket with GitHub Actions
 
 **Usage:**
 ```bash
@@ -289,10 +284,10 @@ S3 Upload → EventBridge → Start Step Function Lambda
 
 - Input: EventBridge S3 event
 - Actions:
-  - Filters out non-video files (music/, thumbnails/, montages/)
+  - Filters out non-video files (`music/`, for example)
   - Extracts S3 bucket and key from event
   - Starts Step Functions state machine with video metadata
-- Output: Step Functions execution ARN
+- Output: Step Functions execution ARN for status polling
 
 ### Step 1: Setup (`process_upload/step1/main.py`)
 
@@ -324,20 +319,20 @@ S3 Upload → EventBridge → Start Step Function Lambda
 
 - Input: Array of kill timestamps
 - Actions:
-  - Adds 2.5-second buffer before/after each kill
+  - Adds 2.5-second (still figuring out a good value) buffer before/after each kill
   - Merges overlapping intervals using interval merging algorithm
   - Handles case where no kills are detected
 - Output: Array of clip intervals `[{start: 5.2, end: 9.5}, {start: 12.0, end: 15.8}]`
 
 ### Step 4: Generate Clips & Montage (`process_upload/step4/main.py`)
 
-**Purpose:** Create final montage with AI commentary and music
+**Purpose:** Create final montage with AI commentary and music (if provided)
 
 **Requirements:** FFmpeg Lambda Layer
 
 - Input: Video path, clip intervals
 - Actions for each clip:
-  - Generate esports commentary using Amazon Bedrock (Titan Text Express)
+  - Generate hype commentary using Amazon Bedrock (Titan Text Express)
   - Convert commentary to speech using Amazon Polly (Stephen voice, generative engine)
   - Extract video segment with FFmpeg
   - Overlay commentary audio on video clip
@@ -388,7 +383,7 @@ CREATE INDEX idx_videos_user_email ON videos(user_email);
 - Input: User email, filename, content type
 - Actions:
   - Sanitizes email (replaces `@` with `_at_`)
-  - Generates presigned PUT URL (10 min expiry)
+  - Generates presigned PUT URL (5 min expiry)
   - Sets S3 key as `{email}/{timestamp}-{filename}`
 - Output: Presigned URL and S3 key
 
@@ -416,25 +411,8 @@ CREATE INDEX idx_videos_user_email ON videos(user_email);
   - Returns client ID, domain, and endpoints
 - Output: Cognito configuration JSON
 
-## S3 Directory Structure
-
-```
-/{sanitized-email}/                        # User upload directory (@ replaced with _at_)
-  {timestamp}-{filename}.mp4               # Original uploaded video
-  
-/music/                                    # NCS background music tracks
-  *.mp3                                    # No Copyright Sounds music files
-
-/montages/{sanitized-email}/               # Processed montages
-  {timestamp}-montage.mp4                  # Final montage output
-  
-/thumbnails/{sanitized-email}/             # Video thumbnails  
-  {timestamp}-thumbnail.jpg                # Extracted thumbnail frame
-```
-
 **Notes:**
-- Original uploads and final outputs are kept permanently
-- All processing happens in Lambda's `/tmp` directory (no S3 intermediate files)
+- All processing happens in Lambda's `/tmp` directory for speed optimization (no S3 intermediate files)
 - User emails are sanitized (e.g., `user@example.com` → `user_at_example.com`)
 
 ## AWS Services Used
@@ -455,17 +433,18 @@ CREATE INDEX idx_videos_user_email ON videos(user_email);
 - **EventBridge:** Event-driven triggers on S3 uploads
 - **Step Functions:** Orchestrates 4-step video processing workflow with error retry logic
 - **Rekognition Custom Labels:** ML model for kill detection in gameplay frames
-- **Bedrock (Titan Text Express):** AI-generated esports commentary
-- **Polly (Generative TTS):** Text-to-speech with Stephen voice for commentary narration
+- **Bedrock (Titan Text Express):** AI-generated hype commentary
+- **Polly (Generative TTS):** Text-to-speech with for commentary narration
 
 ### Lambda Layers
 
-- **FFmpeg Layer:** Custom-built with x264 support for video/audio processing
+- **FFmpeg Layer:** Custom-built with x264 support for video/audio processing and browser compatibility
 - **psycopg2 Layer:** PostgreSQL adapter for Python Lambda functions
 
 ### Additional Components
 
-- **Cloudflare (External):** DNS management, CDN caching, SSL/TLS, DDoS protection, ReCaptcha
+- **Cloudflare (External):** DNS management, CDN caching, SSL/TLS and DDoS protection
 - **CloudWatch:** Logging for all Lambda functions and Step Functions
 
 > **NOTE:** This architecture is optimized for demonstration and cost management rather than production scale. For a production deployment serving thousands of concurrent users, the design would incorporate asynchronous processing with SQS, increased Lambda concurrency limits, WebSocket notifications, and additional caching layers.
+
