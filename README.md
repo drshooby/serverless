@@ -4,11 +4,11 @@ This project is for my Cloud Computing final at the University of San Francisco.
 
 ## Project Overview
 
-This project is a full-fledged AI Single Page Application (SPA) built with serverless architecture and cloud infrastructure. It demonstrates best practices in modern cloud deployment, security, and AI integration.
+This project is a full-fledged AI Single Page Application (SPA) built with serverless architecture and cloud infrastructure.
 
 ## What Does It Do
 
-AI-powered Valorant montage maker using AWS services. Takes ~20-second gameplay clips, detects kills using Rekognition, and generates an edited montage with AI commentary.
+AI-powered Valorant montage maker using AWS services. Takes up to ~4 min gameplay clips, detects kills using Rekognition, and generates an edited montage with AI commentary.
 
 ## Requirements
 
@@ -447,4 +447,5 @@ CREATE INDEX idx_videos_user_email ON videos(user_email);
 - **CloudWatch:** Logging for all Lambda functions and Step Functions
 
 > **NOTE:** This architecture is optimized for demonstration and cost management rather than production scale. For a production deployment serving thousands of concurrent users, the design would incorporate asynchronous processing with SQS, increased Lambda concurrency limits, WebSocket notifications, and additional caching layers.
+
 
